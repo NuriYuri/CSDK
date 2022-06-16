@@ -1,5 +1,6 @@
-import { Skill } from './skill';
-import { State } from './state';
+import type { Effect } from './effect';
+import type { Skill } from './skill';
+import type { State } from './state';
 
 export type Creature<T> = {
   readonly id: string;
@@ -9,8 +10,6 @@ export type Creature<T> = {
   skills: Skill<unknown>[];
   level: number;
   exp: number;
+  effects: Record<string, Effect<unknown, string>[]>;
   data: T;
 };
-
-// TODO: add living stats data (increase/decrease) CSDK will not reset states out of battle because this is stupid
-// TODO: add effect data (same as stats but we live the freedom of the effect to remove themselves at the end of battle)

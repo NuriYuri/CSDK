@@ -10,6 +10,7 @@ describe('skill', () => {
     exp: 0,
     states: [],
     skills: [],
+    effects: {},
     data: undefined,
   };
 

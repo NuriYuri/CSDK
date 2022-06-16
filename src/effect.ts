@@ -1,14 +1,17 @@
-import { Creature } from './creature';
-import { Skill } from './skill';
+import type { Creature } from './creature';
+import type { Element } from './element';
+import type { ItemBase } from './item';
+import type { Skill } from './skill';
+import type { State } from './state';
 
 /**
  * Context object passed to the effect function, contains all the relevant data
  */
 export type EffectContext<V> = {
-  target: Creature<unknown>;
-  data: V;
-  user?: Creature<unknown>;
-  skill?: Skill<unknown>;
+  readonly target: Creature<unknown>;
+  readonly data: V;
+  readonly user?: Creature<unknown>;
+  readonly skill?: Skill<unknown>;
   cancellationReason?: (sceneState: unknown) => unknown;
 };
 
@@ -35,8 +38,17 @@ export const preventEffect = (context: EffectContext<unknown>, reason: typeof co
 };
 
 type EffectFunctions<T, U extends string> = {
-  readonly onDamage: (effect: Effect<T, U>, user: string, target: string, damage: number) => EffectFunctionReturnType;
-  readonly onStatus: (effect: Effect<T, U>, user: string, target: string, status: string) => EffectFunctionReturnType;
+  readonly onGetStatModifier: (effect: Effect<T, U>, context: EffectContext<{ stat: string; modifier: number }>) => void;
+  readonly onDamageComputation: (effect: Effect<T, U>, context: EffectContext<{ hp: number }>) => EffectFunctionReturnType;
+  readonly onAfterDamageApplied: (effect: Effect<T, U>, context: EffectContext<{ hp: number }>) => void;
+  readonly onCanApplyState: (effect: Effect<T, U>, context: EffectContext<{ state: State<unknown, string> }>) => EffectFunctionReturnType;
+  readonly onStateApplied: (effect: Effect<T, U>, context: EffectContext<{ state: State<unknown, string> }>) => void;
+  readonly onCanUseSkill: (effect: Effect<T, U>, context: EffectContext<undefined>) => EffectFunctionReturnType;
+  readonly onGetSkillElements: (effect: Effect<T, U>, context: EffectContext<{ elements: Element[] }>) => void;
+  readonly onGetCreatureElements: (effect: Effect<T, U>, context: EffectContext<{ elements: Element[] }>) => void;
+  readonly onItemHeld: (effect: Effect<T, U>, context: EffectContext<{ item: ItemBase<unknown, string> }>) => void;
+  readonly onItemDropped: (effect: Effect<T, U>, context: EffectContext<{ item: ItemBase<unknown, string> }>) => void;
+  readonly onCleanup: (effect: Effect<T, U>, isInBattle: boolean) => boolean;
 };
 export type PartialEffectFunctions<T, U extends string> = Partial<EffectFunctions<T, U>>;
 export type GenericEffectFunctions = EffectFunctions<unknown, string>;
@@ -49,18 +61,29 @@ export type Effect<T, U extends string> = {
 
 const DEFINED_EFFECTS: Record<string, Record<string, GenericEffectFunctions>> = {};
 const VOID_EFFECT: GenericEffectFunctions = {
-  onDamage: () => null,
-  onStatus: () => null,
+  onGetStatModifier: () => null,
+  onDamageComputation: () => undefined,
+  onAfterDamageApplied: () => null,
+  onCanApplyState: () => undefined,
+  onStateApplied: () => null,
+  onCanUseSkill: () => undefined,
+  onGetSkillElements: () => null,
+  onGetCreatureElements: () => null,
+  onItemHeld: () => null,
+  onItemDropped: () => null,
+  onCleanup: () => false,
 };
+
+export const __getVoidEffectFunctions = () => VOID_EFFECT;
 
 /**
  * Register a new effect so system can create one with ease
  * @example
- * registerEffect('state', 'immunity', { onDamage: (effect: ImmunityEffect, context: HpDownContext) => 'prevent' })
+ * registerEffect('state', 'immunity', { onDamageComputation: (effect: ImmunityEffect, context: HpDownContext) => { context.hp = 0 } });
  */
 export const registerEffect = <T, U extends string>(category: string, type: U, effectFunctions: PartialEffectFunctions<T, U>) => {
   DEFINED_EFFECTS[category] ||= {};
-  DEFINED_EFFECTS[category][type] = { ...VOID_EFFECT, effectFunctions } as GenericEffectFunctions;
+  DEFINED_EFFECTS[category][type] = { ...VOID_EFFECT, ...effectFunctions } as GenericEffectFunctions;
 };
 
 /**
@@ -68,7 +91,7 @@ export const registerEffect = <T, U extends string>(category: string, type: U, e
  * @example
  * const newEffect = createEffect('state', { type: 'immunity', data: creature });
  */
-export const createEffect = <T, U extends string>(category: string, effect: Omit<Effect<T, U>, 'effectFunction'>): Effect<T, U> => {
+export const createEffect = <T, U extends string>(category: string, effect: Omit<Effect<T, U>, 'effectFunctions'>): Effect<T, U> => {
   if (!DEFINED_EFFECTS[category]) {
     return {
       ...effect,
@@ -82,5 +105,11 @@ export const createEffect = <T, U extends string>(category: string, effect: Omit
   };
 };
 
-// TODO: define all the kind of possible effect happening on battle
-// TODO: add tests
+/**
+ * Cleanup all the invalid/finished the effect from a creature
+ */
+export const cleanupEffects = (creature: Creature<unknown>, isInBattle: boolean) => {
+  creature.effects = Object.fromEntries(
+    Object.entries(creature.effects).map(([key, value]) => [key, value.filter((effect) => !effect.effectFunctions.onCleanup(effect, isInBattle))]),
+  );
+};
