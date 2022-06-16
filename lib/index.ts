@@ -1,3 +1,4 @@
+export * from './data';
 export * from './creature';
 export * from './effect';
 export * from './element';
