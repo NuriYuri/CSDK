@@ -13,3 +13,10 @@ export type Creature<T> = {
   effects: Record<string, Effect<unknown, string>[]>;
   data: T;
 };
+
+let COMPUTE_STAT_FUNCTION = <T>(creature: Creature<T>, stat: string) => 1;
+
+export const registerComputeStatFunction = (func: typeof COMPUTE_STAT_FUNCTION) => {
+  COMPUTE_STAT_FUNCTION = func;
+};
+export const computeStat = <T>(creature: Creature<T>, stat: string) => COMPUTE_STAT_FUNCTION(creature, stat);
