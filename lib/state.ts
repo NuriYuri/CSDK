@@ -18,6 +18,8 @@
  * ```
  */
 
+import { CyclicDeserializationContext } from './data/cyclicSerialization';
+import { ReferencingArray } from './data/referencing';
 import { createEffect, Effect, effectExist } from './effect';
 
 export type State<T, U extends string> = {
@@ -56,3 +58,35 @@ export const addState = <T, U extends string>(creature: DataWithStates, state: S
 /** Get a state from the creature, returns undefined if state has not been found */
 export const getState = <T, U extends string>(creature: DataWithStates, type: U): State<T, U> | undefined =>
   creature.states.find((state) => state.type === type) as State<T, U>;
+
+let SERIALIZE_STATE_DATA = (state: State<unknown, string>, referencingArray: ReferencingArray): unknown => state.data;
+let DESERIALIZE_STATE_DATA = (data: unknown, deserializationContext: CyclicDeserializationContext) => data;
+
+/**
+ * Register the function that tells CSDK how to serialize the state data
+ *
+ * @example registerSerializeStateData((state, referencingArray) => getReferenceId(state.data))
+ */
+export const registerSerializeStateData = <T, U extends string, V>(serializer: (state: State<T, U>, referencingArray: ReferencingArray) => V) => {
+  SERIALIZE_STATE_DATA = serializer;
+};
+
+/** Function that serialize the state data */
+export const serializeStateData = (state: State<unknown, string>, referencingArray: ReferencingArray) =>
+  SERIALIZE_STATE_DATA(state, referencingArray);
+
+/**
+ * Register the function that tells CSDK how to deserialize the state data
+ *
+ * @example registerDeserializeStateData((data, deserializationContext) => getObjectFromReferenceId(
+ *   data,
+ *   deserializationContext.serializedReferencingArray,
+ * ) as StateData);
+ */
+export const registerDeserializeStateData = <T, U>(deserializer: (data: U, deserializationContext: CyclicDeserializationContext) => T) => {
+  DESERIALIZE_STATE_DATA = deserializer;
+};
+
+/** Function that deserialize the state data */
+export const deserializeStateData = (data: unknown, deserializationContext: CyclicDeserializationContext) =>
+  DESERIALIZE_STATE_DATA(data, deserializationContext);

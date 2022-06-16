@@ -164,7 +164,7 @@ describe('cyclicSerialization', () => {
       const deserializeArray = (object: number[], deserializationContext: CyclicDeserializationContext) =>
         object.map((value) =>
           cyclicDeserialize(
-            getObjectFromReferenceId(value as ReferenceID, deserializationContext.serializedReferencingArray),
+            getObjectFromReferenceId(value as ReferenceID, deserializationContext.serializedReferencingArray) as { a: ReferenceID },
             deserializeReferencedObject,
             deserializationContext,
           ),
@@ -190,7 +190,10 @@ describe('cyclicSerialization', () => {
       const deserializeArray = (object: number[], deserializationContext: CyclicDeserializationContext) =>
         object.map((value) =>
           cyclicDeserialize(
-            getObjectFromReferenceId(value as ReferenceID, deserializationContext.serializedReferencingArray),
+            getObjectFromReferenceId(
+              value as ReferenceID,
+              deserializationContext.serializedReferencingArray,
+            ) as typeof cyclicSerializedObject['referencingArray'][number],
             deserializeReferencedObject,
             deserializationContext,
           ),

@@ -1,5 +1,16 @@
 import { Creature } from './creature';
-import { addSkill, getSkill, hasSkill, removeSkill } from './skill';
+import { CyclicDeserializationContext } from './data/cyclicSerialization';
+import {
+  addSkill,
+  deserializeSkillData,
+  getSkill,
+  hasSkill,
+  registerDeserializeSkillData,
+  registerSerializeSkillData,
+  removeSkill,
+  serializeSkillData,
+  Skill,
+} from './skill';
 
 describe('skill', () => {
   const creature: Creature<undefined> = {
@@ -71,6 +82,49 @@ describe('skill', () => {
         skills: [{ id: 'test', data: undefined }],
       };
       expect(getSkill(creatureWithSkills, 'test')).toEqual({ id: 'test', data: undefined });
+    });
+  });
+
+  describe('registerSerializeSkillData - serializeSkillData', () => {
+    it('just map data to data by default', () => {
+      expect(serializeSkillData({ id: 'skill', data: 5 }, [])).toEqual(5);
+      expect(serializeSkillData({ id: 'skill', data: { complex: '33' } }, [])).toEqual({ complex: '33' });
+    });
+
+    it('register and call the serialize function properly', () => {
+      const serializeData = jest.fn();
+      serializeData.mockReturnValueOnce('some dummy data');
+      registerSerializeSkillData(serializeData);
+      expect(serializeSkillData({ id: 'skill', data: undefined }, [])).toEqual('some dummy data');
+      expect(serializeData).toHaveBeenCalledWith({ id: 'skill', data: undefined }, []);
+
+      serializeData.mockReturnValueOnce('some other data');
+      expect(serializeSkillData({ id: 'skill2', data: 33 }, [null])).toEqual('some other data');
+      expect(serializeData).toHaveBeenCalledWith({ id: 'skill2', data: 33 }, [null]);
+    });
+  });
+
+  describe('registerDeserializeSkillData - deserializeSkillData', () => {
+    const deserializationContext: CyclicDeserializationContext = {
+      serializedReferencingArray: [],
+      deserializedReferencingArray: [],
+    };
+
+    it('just map data to data by default', () => {
+      expect(deserializeSkillData(5, deserializationContext)).toEqual(5);
+      expect(deserializeSkillData({ complex: '33' }, deserializationContext)).toEqual({ complex: '33' });
+    });
+
+    it('register and call the deserialize function properly', () => {
+      const deserializeData = jest.fn();
+      deserializeData.mockReturnValueOnce('some dummy data');
+      registerDeserializeSkillData(deserializeData);
+      expect(deserializeSkillData(0, deserializationContext)).toEqual('some dummy data');
+      expect(deserializeData).toHaveBeenCalledWith(0, deserializationContext);
+
+      deserializeData.mockReturnValueOnce('some other data');
+      expect(deserializeSkillData({ test: 22 }, deserializationContext)).toEqual('some other data');
+      expect(deserializeData).toHaveBeenCalledWith({ test: 22 }, deserializationContext);
     });
   });
 });
