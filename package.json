@@ -6,12 +6,9 @@
   "description": "CSDK",
   "scripts": {
     "build": "tsc",
-    "start": "ts-node src/index.ts",
     "test": "jest"
   },
-  "dependencies": {
-    "raylib": "*"
-  },
+  "dependencies": {},
   "devDependencies": {
     "@types/jest": "^28.1.1",
     "@types/node": "^16.11.7",
@@ -20,7 +17,8 @@
     "ts-node": "^10.8.1",
     "tslib": "^2.4.0",
     "tslint": "^6.1.3",
-    "typescript": "^4.5.4"
+    "typescript": "^4.5.4",
+    "raylib": "*"
   },
   "pkg": {
     "scripts": "build/**/*.js",
@@ -31,5 +29,16 @@
       "node16-win-x64"
     ],
     "outputPath": "dist"
-  }
+  },
+  "files": [
+    "index.d.ts",
+    "dist/lib/*.d.ts",
+    "dist/lib/*.js",
+    "dist/lib/*.js.map",
+    "dist/lib/**/*.d.ts",
+    "dist/lib/**/*.js",
+    "dist/lib/**/*.js.map",
+    "lib/**/*",
+    "tsconfig.json"
+  ]
 }

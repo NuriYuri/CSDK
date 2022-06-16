@@ -11,6 +11,8 @@
     "strictNullChecks": true
   },
   "exclude": [
-    "index.d.ts"
+    "index.d.ts",
+    "examples/**",
+    "**/*.test.ts"
   ]
 }
