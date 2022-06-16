@@ -3,7 +3,7 @@ import { computeStat, Creature, registerComputeStatFunction } from './creature';
 describe('creature', () => {
   describe('registerComputeStatFunction - computeStat', () => {
     it('returns 1 if no function has been registered', () => {
-      expect(computeStat(undefined as unknown as Creature<unknown>, undefined as string)).toEqual(1);
+      expect(computeStat(undefined as unknown as Creature<unknown>, undefined as unknown as string)).toEqual(1);
     });
 
     it('calls the registered function', () => {

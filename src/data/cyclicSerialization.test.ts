@@ -65,7 +65,7 @@ describe('cyclicSerialization', () => {
   describe('cyclicSerialize', () => {
     it('stores the objects in context as expected', () => {
       const context = createCyclicSerializationContext();
-      const cyclicObject = { objectsWithInternalReference: [] };
+      const cyclicObject = { objectsWithInternalReference: [] as { cyclicObject: unknown; value: number }[] };
       cyclicObject.objectsWithInternalReference.push({ cyclicObject, value: 1 });
       cyclicObject.objectsWithInternalReference.push({ cyclicObject, value: 2 });
 

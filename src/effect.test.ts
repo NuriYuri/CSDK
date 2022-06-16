@@ -1,5 +1,5 @@
 import { Creature } from './creature';
-import { cleanupEffects, createEffect, EffectContext, preventEffect, registerEffect, __getVoidEffectFunctions } from './effect';
+import { cleanupEffects, createEffect, EffectContext, effectExist, preventEffect, registerEffect, __getVoidEffectFunctions } from './effect';
 
 describe('effect', () => {
   describe('preventEffect', () => {
@@ -48,6 +48,24 @@ describe('effect', () => {
       expect(effect.effectFunctions.onCleanup === onCleanup).toBeTruthy();
       expect(effect.type).toEqual('test');
       expect(effect.data).toEqual(25);
+    });
+  });
+
+  describe('effectExist', () => {
+    it('returns false if the category does not exist', () => {
+      expect(effectExist('undefinedCategory', 'test')).toEqual(false);
+    });
+
+    it('returns false if the effect type does not exist', () => {
+      const onCleanup = jest.fn();
+      registerEffect('category', 'test2', { onCleanup });
+      expect(effectExist('category', 'test3')).toEqual(false);
+    });
+
+    it('returns true if the effect exists', () => {
+      const onCleanup = jest.fn();
+      registerEffect('category', 'test', { onCleanup });
+      expect(effectExist('category', 'test')).toEqual(true);
     });
   });
 

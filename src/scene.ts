@@ -1,4 +1,4 @@
-let sceneProcessingCleanup: () => void | undefined;
+let sceneProcessingCleanup: (() => void) | undefined;
 let getDelta: () => number = () => 0.016666;
 
 /**

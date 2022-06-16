@@ -3,6 +3,7 @@ import type { Element } from './element';
 import type { ItemBase } from './item';
 import type { Skill } from './skill';
 import type { State } from './state';
+import type { StateMutationFunction } from './stateMutationQueue';
 
 /**
  * Context object passed to the effect function, contains all the relevant data
@@ -12,7 +13,7 @@ export type EffectContext<V> = {
   readonly data: V;
   readonly user?: Creature<unknown>;
   readonly skill?: Skill<unknown>;
-  cancellationReason?: (sceneState: unknown) => unknown;
+  cancellationReason?: StateMutationFunction<unknown>;
 };
 
 /**
@@ -22,6 +23,7 @@ export type EffectContext<V> = {
  * - `undefined` is the default return
  */
 type EffectFunctionReturnType = 'passthrough' | 'prevent' | undefined;
+type NoisyEffectFunctionReturnType = StateMutationFunction<unknown> | undefined;
 
 /**
  * Function to call to help with returning prevention with reason
@@ -32,7 +34,7 @@ type EffectFunctionReturnType = 'passthrough' | 'prevent' | undefined;
  *  return preventEffect(context, (sceneState) => ({ ...sceneState, messageToDisplay: 'blablabla', afterMessage: undefined }))
  * }
  */
-export const preventEffect = (context: EffectContext<unknown>, reason: typeof context['cancellationReason']): 'prevent' => {
+export const preventEffect = (context: EffectContext<unknown>, reason?: StateMutationFunction<unknown>): 'prevent' => {
   context.cancellationReason = reason;
   return 'prevent';
 };
@@ -40,14 +42,14 @@ export const preventEffect = (context: EffectContext<unknown>, reason: typeof co
 type EffectFunctions<T, U extends string> = {
   readonly onGetStatModifier: (effect: Effect<T, U>, context: EffectContext<{ stat: string; modifier: number }>) => void;
   readonly onDamageComputation: (effect: Effect<T, U>, context: EffectContext<{ hp: number }>) => EffectFunctionReturnType;
-  readonly onAfterDamageApplied: (effect: Effect<T, U>, context: EffectContext<{ hp: number }>) => void;
+  readonly onAfterDamageApplied: (effect: Effect<T, U>, context: EffectContext<{ hp: number }>) => NoisyEffectFunctionReturnType;
   readonly onCanApplyState: (effect: Effect<T, U>, context: EffectContext<{ state: State<unknown, string> }>) => EffectFunctionReturnType;
-  readonly onStateApplied: (effect: Effect<T, U>, context: EffectContext<{ state: State<unknown, string> }>) => void;
+  readonly onStateApplied: (effect: Effect<T, U>, context: EffectContext<{ state: State<unknown, string> }>) => NoisyEffectFunctionReturnType;
   readonly onCanUseSkill: (effect: Effect<T, U>, context: EffectContext<undefined>) => EffectFunctionReturnType;
   readonly onGetSkillElements: (effect: Effect<T, U>, context: EffectContext<{ elements: Element[] }>) => void;
   readonly onGetCreatureElements: (effect: Effect<T, U>, context: EffectContext<{ elements: Element[] }>) => void;
-  readonly onItemHeld: (effect: Effect<T, U>, context: EffectContext<{ item: ItemBase<unknown, string> }>) => void;
-  readonly onItemDropped: (effect: Effect<T, U>, context: EffectContext<{ item: ItemBase<unknown, string> }>) => void;
+  readonly onItemHeld: (effect: Effect<T, U>, context: EffectContext<{ item: ItemBase<unknown, string> }>) => NoisyEffectFunctionReturnType;
+  readonly onItemDropped: (effect: Effect<T, U>, context: EffectContext<{ item: ItemBase<unknown, string> }>) => NoisyEffectFunctionReturnType;
   readonly onCleanup: (effect: Effect<T, U>, isInBattle: boolean) => boolean;
 };
 export type PartialEffectFunctions<T, U extends string> = Partial<EffectFunctions<T, U>>;
@@ -63,14 +65,14 @@ const DEFINED_EFFECTS: Record<string, Record<string, GenericEffectFunctions>> = 
 const VOID_EFFECT: GenericEffectFunctions = {
   onGetStatModifier: () => null,
   onDamageComputation: () => undefined,
-  onAfterDamageApplied: () => null,
+  onAfterDamageApplied: () => undefined,
   onCanApplyState: () => undefined,
-  onStateApplied: () => null,
+  onStateApplied: () => undefined,
   onCanUseSkill: () => undefined,
   onGetSkillElements: () => null,
   onGetCreatureElements: () => null,
-  onItemHeld: () => null,
-  onItemDropped: () => null,
+  onItemHeld: () => undefined,
+  onItemDropped: () => undefined,
   onCleanup: () => false,
 };
 
@@ -84,6 +86,15 @@ export const __getVoidEffectFunctions = () => VOID_EFFECT;
 export const registerEffect = <T, U extends string>(category: string, type: U, effectFunctions: PartialEffectFunctions<T, U>) => {
   DEFINED_EFFECTS[category] ||= {};
   DEFINED_EFFECTS[category][type] = { ...VOID_EFFECT, ...effectFunctions } as GenericEffectFunctions;
+};
+
+/**
+ * Test if an effect exists
+ */
+export const effectExist = (category: string, type: string) => {
+  if (!DEFINED_EFFECTS[category]) return false;
+
+  return DEFINED_EFFECTS[category][type] ? true : false;
 };
 
 /**

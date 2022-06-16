@@ -13,8 +13,8 @@ describe('item', () => {
       handler.mockReturnValueOnce(true);
       handler.mockReturnValueOnce(false);
       onCanItemBeUsed('test', handler);
-      expect(canItemBeUsed(item, { val: 1 } as unknown)).toEqual(true);
-      expect(canItemBeUsed(item, { val: 2 } as unknown)).toEqual(false);
+      expect(canItemBeUsed(item, { val: 1 })).toEqual(true);
+      expect(canItemBeUsed(item, { val: 2 })).toEqual(false);
 
       expect(handler).toHaveBeenCalledTimes(2);
       expect(handler).toHaveBeenNthCalledWith(1, item, { val: 1 });
@@ -32,7 +32,7 @@ describe('item', () => {
       const subHandler = jest.fn();
       handler.mockImplementationOnce((calledItem, sceneState) => ({ ...sceneState, itemAction: { item: calledItem, handler: subHandler } }));
       onUseItem('test', handler);
-      expect(useItem(item, { val: 1 } as unknown)).toEqual({
+      expect(useItem(item, { val: 1 })).toEqual({
         val: 1,
         itemAction: {
           item,

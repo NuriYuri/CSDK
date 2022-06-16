@@ -78,6 +78,7 @@ export const finalizeCyclicSerialization = <T>(serializedObject: T, context: Cyc
   const { referencingArray, objectsWithCyclicDependencies } = context;
   objectsWithCyclicDependencies.forEach((object) => {
     overwriteObjectFromReferenceId(object, object.cyclicReferenceId, referencingArray);
+    // @ts-ignore ts(2790)
     delete object.cyclicReferenceId;
   });
 

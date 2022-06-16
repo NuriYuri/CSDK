@@ -94,7 +94,7 @@ export const onCanItemBeUsed = <I extends ItemBase<T, U>, T, U extends string>(
  *
  * @example if (canItemBeUsed(item, states)) { doSomething }
  */
-export const canItemBeUsed = (item: ItemBase<unknown, string>, sceneState: GenericItemActableSceneState) =>
+export const canItemBeUsed = <T>(item: ItemBase<unknown, string>, sceneState: GenericItemActableSceneState & T) =>
   CAN_BE_USED_HANDLERS[item.type] ? CAN_BE_USED_HANDLERS[item.type](item, sceneState) : false;
 
 /** Function registering the handler to call when useItem is called with an item */
@@ -110,5 +110,5 @@ export const onUseItem = <I extends ItemBase<T, U>, T, U extends string>(
  *
  * @example return { ...states, ...useItem(item, states)}
  */
-export const useItem = (item: ItemBase<unknown, string>, sceneState: GenericItemActableSceneState) =>
+export const useItem = <T>(item: ItemBase<unknown, string>, sceneState: GenericItemActableSceneState & T) =>
   USE_HANDLERS[item.type] ? USE_HANDLERS[item.type](item, sceneState) : VOID_ITEM_ACTABLE_STATE;

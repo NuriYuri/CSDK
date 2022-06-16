@@ -1,4 +1,5 @@
 import { Creature } from './creature';
+import { registerEffect, __getVoidEffectFunctions } from './effect';
 import { addState, getState, hasState, removeState } from './state';
 
 describe('state', () => {
@@ -57,6 +58,26 @@ describe('state', () => {
 
       addState(workingCreature, { type: 'test', data: 1 });
       expect(workingCreature).toEqual({ ...creature, states: [{ type: 'test', data: 0 }] });
+    });
+
+    it('adds the state and effect if state has effect', () => {
+      registerEffect('states', 'stateWithEffect', {});
+
+      const workingCreature = { ...creature };
+      const expectations = {
+        ...creature,
+        states: [{ type: 'stateWithEffect', data: 0 }],
+        effects: {
+          states: [
+            { type: 'stateWithEffect', data: { creature, state: { type: 'stateWithEffect', data: 0 } }, effectFunctions: __getVoidEffectFunctions() },
+          ],
+        },
+      };
+      expectations.effects.states[0].data.creature = expectations;
+      addState(workingCreature, { type: 'stateWithEffect', data: 0 });
+      expect(workingCreature).toEqual(expectations);
+      addState(workingCreature, { type: 'stateWithEffect', data: 0 });
+      expect(workingCreature).toEqual(expectations);
     });
   });
 
