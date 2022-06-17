@@ -1,9 +1,16 @@
 import type { Creature } from './creature';
+import { CyclicDeserializationContext, ReferencingArray } from './data';
 import type { Element } from './element';
 import type { ItemBase } from './item';
 import type { Skill } from './skill';
 import type { State } from './state';
 import type { StateMutationFunction } from './stateMutationQueue';
+
+export type Effect<T, U extends string> = {
+  readonly type: U;
+  data: T;
+  readonly effectFunctions: EffectFunctions<T, U>;
+};
 
 /**
  * Context object passed to the effect function, contains all the relevant data
@@ -55,12 +62,6 @@ type EffectFunctions<T, U extends string> = {
 export type PartialEffectFunctions<T, U extends string> = Partial<EffectFunctions<T, U>>;
 export type GenericEffectFunctions = EffectFunctions<unknown, string>;
 
-export type Effect<T, U extends string> = {
-  readonly type: U;
-  data: T;
-  readonly effectFunctions: EffectFunctions<T, U>;
-};
-
 const DEFINED_EFFECTS: Record<string, Record<string, GenericEffectFunctions>> = {};
 const VOID_EFFECT: GenericEffectFunctions = {
   onGetStatModifier: () => null,
@@ -76,6 +77,7 @@ const VOID_EFFECT: GenericEffectFunctions = {
   onCleanup: () => false,
 };
 
+// tslint:disable-next-line: variable-name
 export const __getVoidEffectFunctions = () => VOID_EFFECT;
 
 /**
@@ -123,4 +125,51 @@ export const cleanupEffects = (creature: Creature<unknown>, isInBattle: boolean)
   creature.effects = Object.fromEntries(
     Object.entries(creature.effects).map(([key, value]) => [key, value.filter((effect) => !effect.effectFunctions.onCleanup(effect, isInBattle))]),
   );
+};
+
+const SERIALIZE_EFFECT: Record<
+  string,
+  Record<string, (effect: Effect<unknown, string>, referencingArray: ReferencingArray) => Effect<unknown, string>>
+> = {};
+const DESERIALIZE_EFFECT: Record<
+  string,
+  Record<string, (data: Effect<unknown, string>, context: CyclicDeserializationContext) => Effect<unknown, string>>
+> = {};
+
+/** Register the effect serialization function for an effect category & type */
+export const registerSerializeEffect = <T, U extends string, V>(
+  category: string,
+  type: string,
+  serializer: (effect: Effect<T, U>, referencingArray: ReferencingArray) => Effect<V, U>,
+) => {
+  SERIALIZE_EFFECT[category] ||= {};
+  SERIALIZE_EFFECT[category][type] = serializer;
+};
+
+/** Serialize an effect of a category */
+export const serializeEffect = (category: string, effect: Effect<unknown, string>, referencingArray: ReferencingArray): Effect<unknown, string> => {
+  if (!SERIALIZE_EFFECT[category]) return effect;
+
+  return SERIALIZE_EFFECT[category][effect.type]?.(effect, referencingArray) || effect;
+};
+
+/** Register the effect deserialization for an effect category & type */
+export const registerDeserializeEffect = <T, U extends string, V>(
+  category: string,
+  type: string,
+  deserializer: (data: Effect<V, U>, context: CyclicDeserializationContext) => Effect<T, U>,
+) => {
+  DESERIALIZE_EFFECT[category] ||= {};
+  DESERIALIZE_EFFECT[category][type] = deserializer;
+};
+
+/** Deserialize an effect of a category */
+export const deserializeEffect = (
+  category: string,
+  data: Effect<unknown, string>,
+  context: CyclicDeserializationContext,
+): Effect<unknown, string> => {
+  if (!DESERIALIZE_EFFECT[category]) return data;
+
+  return DESERIALIZE_EFFECT[category][data.type]?.(data, context) || data;
 };

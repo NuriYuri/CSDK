@@ -50,8 +50,8 @@ export const addState = <T, U extends string>(creature: DataWithStates, state: S
 
   creature.states = [...creature.states, state];
   if (effectExist('states', state.type)) {
-    creature.effects['states'] ||= [];
-    creature.effects['states'].push(createEffect('states', { type: state.type, data: { creature, state } }));
+    creature.effects.states ||= [];
+    creature.effects.states.push(createEffect('states', { type: state.type, data: { creature, state } }));
   }
 };
 
@@ -60,7 +60,7 @@ export const getState = <T, U extends string>(creature: DataWithStates, type: U)
   creature.states.find((state) => state.type === type) as State<T, U>;
 
 let SERIALIZE_STATE_DATA = (state: State<unknown, string>, referencingArray: ReferencingArray): unknown => state.data;
-let DESERIALIZE_STATE_DATA = (data: unknown, deserializationContext: CyclicDeserializationContext) => data;
+let DESERIALIZE_STATE_DATA = (state: State<unknown, string>, deserializationContext: CyclicDeserializationContext) => state.data;
 
 /**
  * Register the function that tells CSDK how to serialize the state data
@@ -78,15 +78,17 @@ export const serializeStateData = (state: State<unknown, string>, referencingArr
 /**
  * Register the function that tells CSDK how to deserialize the state data
  *
- * @example registerDeserializeStateData((data, deserializationContext) => getObjectFromReferenceId(
- *   data,
+ * @example registerDeserializeStateData((state, deserializationContext) => getObjectFromReferenceId(
+ *   state.data,
  *   deserializationContext.serializedReferencingArray,
  * ) as StateData);
  */
-export const registerDeserializeStateData = <T, U>(deserializer: (data: U, deserializationContext: CyclicDeserializationContext) => T) => {
+export const registerDeserializeStateData = <T, U>(
+  deserializer: (state: State<U, string>, deserializationContext: CyclicDeserializationContext) => T,
+) => {
   DESERIALIZE_STATE_DATA = deserializer;
 };
 
 /** Function that deserialize the state data */
-export const deserializeStateData = (data: unknown, deserializationContext: CyclicDeserializationContext) =>
-  DESERIALIZE_STATE_DATA(data, deserializationContext);
+export const deserializeStateData = (state: State<unknown, string>, deserializationContext: CyclicDeserializationContext) =>
+  DESERIALIZE_STATE_DATA(state, deserializationContext);

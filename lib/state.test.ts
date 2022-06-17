@@ -131,20 +131,20 @@ describe('state', () => {
     };
 
     it('just map data to data by default', () => {
-      expect(deserializeStateData(5, deserializationContext)).toEqual(5);
-      expect(deserializeStateData({ complex: '33' }, deserializationContext)).toEqual({ complex: '33' });
+      expect(deserializeStateData({ type: 'test', data: 5 }, deserializationContext)).toEqual(5);
+      expect(deserializeStateData({ type: 'test', data: { complex: '33' } }, deserializationContext)).toEqual({ complex: '33' });
     });
 
     it('register and call the deserialize function properly', () => {
       const deserializeData = jest.fn();
       deserializeData.mockReturnValueOnce('some dummy data');
       registerDeserializeStateData(deserializeData);
-      expect(deserializeStateData(0, deserializationContext)).toEqual('some dummy data');
-      expect(deserializeData).toHaveBeenCalledWith(0, deserializationContext);
+      expect(deserializeStateData({ type: 'test', data: 0 }, deserializationContext)).toEqual('some dummy data');
+      expect(deserializeData).toHaveBeenCalledWith({ type: 'test', data: 0 }, deserializationContext);
 
       deserializeData.mockReturnValueOnce('some other data');
-      expect(deserializeStateData({ test: 22 }, deserializationContext)).toEqual('some other data');
-      expect(deserializeData).toHaveBeenCalledWith({ test: 22 }, deserializationContext);
+      expect(deserializeStateData({ type: 'test', data: { test: 22 } }, deserializationContext)).toEqual('some other data');
+      expect(deserializeData).toHaveBeenCalledWith({ type: 'test', data: { test: 22 } }, deserializationContext);
     });
   });
 });

@@ -1,5 +1,18 @@
 import { Creature } from './creature';
-import { cleanupEffects, createEffect, EffectContext, effectExist, preventEffect, registerEffect, __getVoidEffectFunctions } from './effect';
+import {
+  cleanupEffects,
+  createEffect,
+  deserializeEffect,
+  Effect,
+  EffectContext,
+  effectExist,
+  preventEffect,
+  registerDeserializeEffect,
+  registerEffect,
+  registerSerializeEffect,
+  serializeEffect,
+  __getVoidEffectFunctions,
+} from './effect';
 
 describe('effect', () => {
   describe('preventEffect', () => {
@@ -132,6 +145,45 @@ describe('effect', () => {
         category1: [createEffect('category', mapOnlyCleanable)],
         category2: [createEffect('category', mapOnlyCleanable)],
       });
+    });
+  });
+
+  describe('registerSerializeEffect - serializeEffect', () => {
+    it('just returns the effect if category has no serializer', () => {
+      // Note: if the category exists it will try to access 99.type which does not exist and throw an error
+      expect(serializeEffect('categoryWithNoSerializer', 99 as unknown as Effect<unknown, string>, [])).toEqual(99);
+    });
+
+    it('just returns the effect if type has no serializer', () => {
+      registerSerializeEffect('category', 'test', (serializedEffect) => ({ ...serializedEffect, data: !effect.data }));
+      const effect = { type: 'noSerializer', data: true, effectFunctions: __getVoidEffectFunctions() };
+      expect(serializeEffect('category', effect, [])).toEqual(effect);
+    });
+
+    it('serializes the effect if type and category has serializer', () => {
+      registerSerializeEffect('category', 'serializable', (serializedEffect) => ({ ...serializedEffect, data: 0 }));
+      const effect = { type: 'serializable', data: { value: 99 }, effectFunctions: __getVoidEffectFunctions() };
+      expect(serializeEffect('category', effect, [])).toEqual({ ...effect, data: 0 });
+    });
+  });
+
+  describe('registerDeserializeEffect - deserializeEffect', () => {
+    const context = { serializedReferencingArray: [], deserializedReferencingArray: [] };
+    it('just returns the effect if category has no deserializer', () => {
+      // Note: if the category exists it will try to access 99.type which does not exist and throw an error
+      expect(deserializeEffect('categoryWithNoDeserializer', 99 as unknown as Effect<unknown, string>, context)).toEqual(99);
+    });
+
+    it('just returns the effect if type has no deserializer', () => {
+      registerDeserializeEffect('category', 'test', (deserializedEffect) => ({ ...deserializedEffect, data: !effect.data }));
+      const effect = { type: 'noDeserializer', data: true, effectFunctions: __getVoidEffectFunctions() };
+      expect(deserializeEffect('category', effect, context)).toEqual(effect);
+    });
+
+    it('serializes the effect if type and category has deserializer', () => {
+      registerDeserializeEffect('category', 'deserializable', (deserializedEffect) => ({ ...deserializedEffect, data: { value: 99 } }));
+      const effect = { type: 'deserializable', data: 0, effectFunctions: __getVoidEffectFunctions() };
+      expect(deserializeEffect('category', effect, context)).toEqual({ ...effect, data: { value: 99 } });
     });
   });
 });
