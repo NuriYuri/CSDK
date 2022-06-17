@@ -1,4 +1,4 @@
-type CollectionRecord = Record<string, { id: string }[]>;
+type CollectionRecord = Record<string, { readonly id: string }[]>;
 
 export const UNDEF_DATA_ID = '__undef__';
 
