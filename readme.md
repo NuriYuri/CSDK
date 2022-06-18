@@ -6,6 +6,32 @@ CSDK is a library allowing to make RPG game with a high level of abstraction. CS
 
 You can't make a game by simply including CSDK to your dependencies. You'll have to describe your game and couple it with another library like [raylib](https://www.raylib.com) or [sfml.js](https://github.com/XadillaX/sfml.js#readme). CSDK only provide few types and functions to handle the game.
 
+- [CSDK](#csdk)
+  - [CSDK's philosophy](#csdks-philosophy)
+  - [CSDK's recommendations](#csdks-recommendations)
+  - [CSDK's types](#csdks-types)
+    - [Creature](#creature)
+      - [Creature identifier](#creature-identifier)
+      - [Generic creature data](#generic-creature-data)
+      - [Define stats](#define-stats)
+      - [Define specialized creature data](#define-specialized-creature-data)
+    - [Effect](#effect)
+    - [Element](#element)
+    - [Item](#item)
+    - [Skill](#skill)
+    - [State](#state)
+  - [CSDK's Scene](#csdks-scene)
+    - [StateMutationQueue](#statemutationqueue)
+  - [Save Data handling](#save-data-handling)
+    - [Cyclic Serialization](#cyclic-serialization)
+      - [Referencing](#referencing)
+      - [Serialization](#serialization)
+      - [Deserialization](#deserialization)
+  - [Game Data Handling](#game-data-handling)
+    - [Load the data of a collection](#load-the-data-of-a-collection)
+    - [Get an object from the dataCollection](#get-an-object-from-the-datacollection)
+    - [Example usage of `DataCollection`](#example-usage-of-datacollection)
+
 ## CSDK's philosophy
 
 CSDK has little key philosophy points:
@@ -20,6 +46,120 @@ CSDK has little key philosophy points:
 
 - CSDK highly recommend that projects using CSDK derive and specialize types and functions provided by CSDK in a way that types might not be unknown on logic side of the project.
 - CSDK Author might be wrong, you have to discuss its design choice as long as it does not break CSDK philosophy.
+
+## CSDK's types
+
+CSDK provide several generic data type with their own helper functions, this allows dynamic feature implementation without being restricted to inflexible types like PSDK, Essentials or RPG Maker does.
+
+### Creature
+
+The `Creature` type contains the minimal information to simulate an actual game creature, if you want to extend it, you can define the type of the data fields.
+
+#### Creature identifier
+
+Unlike other objects (skill, item), the `Creature` type use two keys as identifier: `id` and `form`. Both are string because it makes more sens to read `blob` `red` than 5 1.
+
+To make it easier with data fetching from DataCollection, you should define a type `DataCreature` and `DataCreatureForm` where `DataCreature` define id of the creature and `DataCreatureForm` define the form and all the form related attribute of the creature. Of course, you're not forced to use the forms.
+
+
+#### Generic creature data
+
+In the generic creature data we defined the following members:
+
+- `hp`: which corresponds to creature Health Points.
+- `states`: which list all the states the creature has
+- `skills`: which list all the skills the creature currently know
+- `level`: which specify the current level of the creature
+- `exp`: which specify the total amount of experience the creature has
+- `effects`: which records all the effects applied to the creature (by category)
+
+You might be astonished by the lack of stats, items or passives (abilities). The reason are pretty simple. Each RPG define their own stats and CSDK cannot assume that. Same goes for passive or item, the way it's handled vary between games.
+
+#### Define stats
+
+In order to define the stats, you have two functions:
+
+- `registerComputeStatFunction((creature, stat) => number)`: which register the function responsive of computing the stats.
+- `computeStat(creature, stat)`: which computes the stat based on the previously provided function.
+
+By default `computeStat` returns 1. We highly recommend that none of the stats goes below 1.
+
+
+Example:
+```ts
+export { computeStat } from 'csdk';
+import { registerComputeStatFunction } from 'csdk';
+type StatName = 'maxHp' | 'sp' | 'spd';
+type GameCreature = Creature<{ sp: number }>;
+
+declare function computeStat(creature: GameCreature, stat: StatName): number;
+registerComputeStatFunction((creature: GameCreature, stat: StatName) => {
+  switch(stat) {
+    case 'maxHp':
+    case 'spd':
+      return Math.min(1, creature.level * 10);
+    case 'sp':
+      return creature.data.sp;
+    default:
+      return 1;
+  }
+});
+```
+
+> **Note**  
+> You're not forced to use helper function exported by CSDK for stats, you can make your own soup.
+
+#### Define specialized creature data
+
+As shown in the stats example, you can define specialized data for the creature. But defining the data is not sufficient, especially if that data might contain cyclic dependencies.
+
+For that matter, CSDK exports 4 functions:
+
+- `registerSerializeCreatureData((creature, referencingArray) => unknown)`: which defines how to serialize the `creature.data` field (should return the serialized data field only)
+- `serializeCreature(creature, referencingArray)`: which serialize the whole creature and calls the registered serializer for the data field.
+- `registerDeserializeCreatureData((data, context) => unknown)`: which defines how to deserialize the data field of the creature.
+- `deserializeCreature(creature, context)`: which deserialize a creature and its data using the previously defined deserializer.
+
+Example:
+```typescript
+type GameCreature = Creature<{ friend: GameCreature }>; // introduction of cyclic dependency
+
+registerSerializeCreatureData((creature: GameCreature, referencingArray) => ({
+  friend: getReferenceId(creature.data.friend, referencingArray),
+}));
+
+registerDeserializeCreatureData((data: { friend: ReferenceID }, context): GameCreature['data'] => ({
+  friend: getObjectFromReferenceId(data.friend, context.deserializedReferencingArray),
+}));
+```
+
+### Effect
+
+TODO: Write it
+
+### Element
+
+TODO: Write it
+
+### Item
+
+TODO: Write it
+
+### Skill
+
+TODO: Write it
+
+### State
+
+TODO: Write it
+
+## CSDK's Scene
+
+TODO: Write it
+
+### StateMutationQueue
+
+TODO: Write it
 
 ## Save Data handling
 
@@ -52,20 +192,20 @@ The process of serialization with cyclic dependency relies on 3 functions, 2 typ
 2. To serialize a parent object that might have cyclic dependency with its child call `cyclicSerialize(object, serializer, context)`. This function creates a `ReferenceID` for `object`, calls the `serializer` with `object` and `context.referencingArray` as parameter and returns an union of the `serializer` result and `{ cyclicReferenceId: ReferenceID }` (which is actually holding the `ReferenceID` to object).
 3. Once all objects are serialized, you can create the `CyclicSerializedObject` using `finalizeCyclicSerialization(serializedObject, context)`. It returns what you want to save into the save file.
 
-> **Warning**
+> **Warning**  
 > You must never refer to the output of `cyclicSerialize` into `serializedObject` because you will not be able to deserialize `serializedObject`. Instead, you should always store the `ReferenceID` into `serializedObject` so the deserialization process can guarantee that parents and child will refer to the exact references in Memory. (a === b).
 
-> **Note**
+> **Note**  
 > Cyclic serialization only applies to parent objects! You can just use basic serializer using `object` and `referencingArray` for child objects.
 
-### Deserialization
+#### Deserialization
 
 The process of deserialization with cyclic dependency relies on 2 functions, 2 types and the promise that you call the `cyclicDeserialize` over all parent objects.
 
 1. To start the deserialization, you has to call `createCyclicDeserializationContext(object)` which returns a `CyclicDeserializationContext`. Object is expected to be shaped like the result of `finalizeCyclicSerialization` from Serialization process.
 2. To deserialize an object you can call `cyclicDeserialize(object, deserializer, context)`. This function calls the `deserializer` function with `object` and `context`. Then get the `ReferenceID` of object into `context.serializedReferencingArray` to mutate the object with identic `ReferenceID` from `context.deserializedReferencingArray` with the result of `deserialize`. It always return an object shaped like the result of `deserialize`
 
-> **Note**
+> **Note**  
 > While deserializing child, you must get parents object using `getObjectFromReferenceId` with `context.deserializedReferencingArray`. Even if the parent object can be deserialized after the child object. `cyclicDeserialize` is doing JS witchcraft to ensure references stays the same after deserialization.
 
 ## Game Data Handling
@@ -92,10 +232,10 @@ This function attempts to get the following object
 2. object of `collectionName` with id matching `__undef__` if no matching `id`
 3. first object of `collectionName` if no match at all
 
-> **Warning**
+> **Warning**  
 > It is expected that each collections contain at least 1 object. If that's not the case, `getDataFromDataCollection` will return `undefined`. It's up to you to ensure that it never happens otherwise you'll have to handle that case.
 
-> **Note**
+> **Note**  
 > It's best make object with id `__undef__` the first so `getDataFromDataCollection` won't loop a second time.
 
 ### Example usage of `DataCollection`
@@ -121,5 +261,5 @@ loadDataCollection(dataCollection, 'moves');
 const item = getDataFromDataCollection(dataCollection, 'items', 'testItem');
 ```
 
-> **Note**
+> **Note**  
 > If you plan to provide the data with `defaultCollectionState` by default you can define the `dataLoadFunction` as follow: `(collectionName) => defaultCollectionState[collectionName]`.

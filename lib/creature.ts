@@ -4,8 +4,8 @@ import { deserializeSkillData, serializeSkillData, Skill } from './skill';
 import { deserializeStateData, serializeStateData, State } from './state';
 
 export type Creature<T> = {
-  readonly id: string;
-  readonly form: string;
+  id: string;
+  form?: string;
   hp: number;
   states: State<unknown, string>[];
   skills: Skill<unknown>[];
