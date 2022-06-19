@@ -16,6 +16,12 @@ You can't make a game by simply including CSDK to your dependencies. You'll have
       - [Define stats](#define-stats)
       - [Define specialized creature data](#define-specialized-creature-data)
     - [Effect](#effect)
+      - [Effect context](#effect-context)
+      - [Effect function](#effect-function)
+      - [Creating an effect](#creating-an-effect)
+      - [Registering an effect](#registering-an-effect)
+      - [Serializing effect](#serializing-effect)
+      - [Deserializing effect](#deserializing-effect)
     - [Element](#element)
     - [Item](#item)
     - [Skill](#skill)
@@ -135,8 +141,67 @@ registerDeserializeCreatureData((data: { friend: ReferenceID }, context): GameCr
 
 ### Effect
 
-TODO: Write it
+Effects in CSDK are tiny data objects bound to a list of functions allowing to define what the effect does.
 
+Effects are meant to be stored in creatures but they can also be stored in other places (battle bank, terrain etc...).
+
+In the creatures, the effect are stored in a Record which use a category as key (string) and has Array of Effects as values.
+
+#### Effect context
+
+In order to use the effect functions, you need a context which provides who is affected by the effect and what's the payload of the function.
+
+The effect context contains the following attributes:
+- `target`: Creature that is targeted by the current action involving the effect.
+- `user`: Optional creature that might have triggered the action
+- `skill`: Optional skill that might have triggered the action
+- `cancellationReason`: Optional mutation function to call if the effect has cancelled the action
+- `data`: Payload of the effect function to process stuff. Example, number of HP to deal to the target. This value can't be mutated but its member can.
+
+#### Effect function
+
+Effect function are meant to be called while processing the effect for some actions.
+
+There's 4 kind of effect function:
+1. Computing function: Those function will have no return but are expected to mutate the members of the `data` field in the effect context.
+2. Preventing functions: Those function returns either `undefined`, `'passthrough'` or `'prevent'`. They are expected to effect iteration if return is defined and to change the `cancellationReason`. Those are meant to be used to test things like being able to set a state to a creature or to even deal damages.
+3. Noisy functions: Those functions are expected to return a StateMutation function that will make the scene perform stuff like displaying a message.
+4. Cleanup function: The function `onCleanup` returns a boolean telling if the effect should be removed from the effect stack.
+
+#### Creating an effect
+
+To create an effect you should call the function `createEffect(category, effect)`. This function takes an effect without the `effectFunctions` and add the `effectFunctions` to it depending on its `type` and `category`.
+
+#### Registering an effect
+
+The act of registering an effect just mean specifying the `effectFunctions` effect will get when calling `createEffect`. To do this, call `registerEffect(category, type, effectFunctions)`.
+
+The provided `effectFunctions` can be partial, for example, you can just provide the onCleanup function. All other function will be voided (won't cause any crash if being called).
+
+Example:
+```typescript
+registerEffect('state', 'immunity', { onDamageComputation: (effect: ImmunityEffect, context: HpDownContext) => { context.hp = 0 } });
+```
+
+#### Serializing effect
+
+Since all effect can contain various data, you have to define a serializer for those effect if the said effect might end up in save file.
+
+To do so call the function `registerSerializeEffect(category, type, serializer: (effect, referencingArray) => Effect)`.
+
+When all serializable effect have their own serialization function, `serializeEffect(category, effect, referencingArray)` can be called.
+
+> **Note**  
+> This function is being called by the `serializeCreature` function.
+
+#### Deserializing effect
+
+In order to be able to restore a saved effect, you need to define a deserializer. This can be done with `registerDeserializeEffect(category, type, deserializer: (effect, context) => Effect)`.
+
+Similarly to serialization, effect can be deserialized using `deserializeEffect(category, effect, context)`.
+
+> **Note**  
+> This function is being called by the `serializeCreature` function.
 ### Element
 
 TODO: Write it

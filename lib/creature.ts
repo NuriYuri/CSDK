@@ -15,6 +15,10 @@ export type Creature<T> = {
   data: T;
 };
 
+export type SerializedCreature<T> = Omit<Creature<T>, 'effects'> & {
+  effects: Record<string, Omit<Effect<unknown, string>, 'effectFunctions'>[]>;
+};
+
 let COMPUTE_STAT_FUNCTION = <T>(creature: Creature<T>, stat: string) => 1;
 
 export const registerComputeStatFunction = (func: typeof COMPUTE_STAT_FUNCTION) => {
@@ -31,7 +35,7 @@ export const registerSerializeCreatureData = <T, U>(serializer: (creature: Creat
 };
 
 /** Serialize a creature so it can be saved */
-export const serializeCreature = (creature: Creature<unknown>, referencingArray: ReferencingArray): Creature<unknown> => ({
+export const serializeCreature = (creature: Creature<unknown>, referencingArray: ReferencingArray): SerializedCreature<unknown> => ({
   ...creature,
   states: creature.states.map((state) => ({ ...state, data: serializeStateData(state, referencingArray) })),
   skills: creature.skills.map((skill) => ({ ...skill, data: serializeSkillData(skill, referencingArray) })),
@@ -47,7 +51,7 @@ export const registerDeserializeCreatureData = <T, U>(deserializer: (data: T, co
 };
 
 /** Deserialize a creature so it can be restored */
-export const deserializeCreature = (creature: Creature<unknown>, context: CyclicDeserializationContext): Creature<unknown> => ({
+export const deserializeCreature = (creature: SerializedCreature<unknown>, context: CyclicDeserializationContext): Creature<unknown> => ({
   ...creature,
   states: creature.states.map((state) => ({ ...state, data: deserializeStateData(state, context) })),
   skills: creature.skills.map((skill) => ({ ...skill, data: deserializeSkillData(skill.data, context) })),

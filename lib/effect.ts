@@ -57,6 +57,7 @@ type EffectFunctions<T, U extends string> = {
   readonly onGetCreatureElements: (effect: Effect<T, U>, context: EffectContext<{ elements: Element[] }>) => void;
   readonly onItemHeld: (effect: Effect<T, U>, context: EffectContext<{ item: ItemBase<unknown, string> }>) => NoisyEffectFunctionReturnType;
   readonly onItemDropped: (effect: Effect<T, U>, context: EffectContext<{ item: ItemBase<unknown, string> }>) => NoisyEffectFunctionReturnType;
+  readonly onTurnEnd: (effect: Effect<T, U>, context: EffectContext<{ turnNumber: number }>) => NoisyEffectFunctionReturnType;
   readonly onCleanup: (effect: Effect<T, U>, isInBattle: boolean) => boolean;
 };
 export type PartialEffectFunctions<T, U extends string> = Partial<EffectFunctions<T, U>>;
@@ -74,6 +75,7 @@ const VOID_EFFECT: GenericEffectFunctions = {
   onGetCreatureElements: () => null,
   onItemHeld: () => undefined,
   onItemDropped: () => undefined,
+  onTurnEnd: () => undefined,
   onCleanup: () => false,
 };
 
@@ -129,35 +131,45 @@ export const cleanupEffects = (creature: Creature<unknown>, isInBattle: boolean)
 
 const SERIALIZE_EFFECT: Record<
   string,
-  Record<string, (effect: Effect<unknown, string>, referencingArray: ReferencingArray) => Effect<unknown, string>>
+  Record<string, (effect: Effect<unknown, string>, referencingArray: ReferencingArray) => Omit<Effect<unknown, string>, 'effectFunctions'>>
 > = {};
 const DESERIALIZE_EFFECT: Record<
   string,
-  Record<string, (data: Effect<unknown, string>, context: CyclicDeserializationContext) => Effect<unknown, string>>
+  Record<
+    string,
+    (
+      data: Omit<Effect<unknown, string>, 'effectFunctions'>,
+      context: CyclicDeserializationContext,
+    ) => Omit<Effect<unknown, string>, 'effectFunctions'>
+  >
 > = {};
 
 /** Register the effect serialization function for an effect category & type */
 export const registerSerializeEffect = <T, U extends string, V>(
   category: string,
   type: string,
-  serializer: (effect: Effect<T, U>, referencingArray: ReferencingArray) => Effect<V, U>,
+  serializer: (effect: Effect<T, U>, referencingArray: ReferencingArray) => Omit<Effect<V, U>, 'effectFunctions'>,
 ) => {
   SERIALIZE_EFFECT[category] ||= {};
   SERIALIZE_EFFECT[category][type] = serializer;
 };
 
 /** Serialize an effect of a category */
-export const serializeEffect = (category: string, effect: Effect<unknown, string>, referencingArray: ReferencingArray): Effect<unknown, string> => {
-  if (!SERIALIZE_EFFECT[category]) return effect;
+export const serializeEffect = (
+  category: string,
+  effect: Effect<unknown, string>,
+  referencingArray: ReferencingArray,
+): Omit<Effect<unknown, string>, 'effectFunctions'> => {
+  if (!SERIALIZE_EFFECT[category]) return { type: effect.type, data: effect.data };
 
-  return SERIALIZE_EFFECT[category][effect.type]?.(effect, referencingArray) || effect;
+  return SERIALIZE_EFFECT[category][effect.type]?.(effect, referencingArray) || { type: effect.type, data: effect.data };
 };
 
 /** Register the effect deserialization for an effect category & type */
 export const registerDeserializeEffect = <T, U extends string, V>(
   category: string,
   type: string,
-  deserializer: (data: Effect<V, U>, context: CyclicDeserializationContext) => Effect<T, U>,
+  deserializer: (data: Effect<V, U>, context: CyclicDeserializationContext) => Omit<Effect<T, U>, 'effectFunctions'>,
 ) => {
   DESERIALIZE_EFFECT[category] ||= {};
   DESERIALIZE_EFFECT[category][type] = deserializer;
@@ -166,10 +178,10 @@ export const registerDeserializeEffect = <T, U extends string, V>(
 /** Deserialize an effect of a category */
 export const deserializeEffect = (
   category: string,
-  data: Effect<unknown, string>,
+  data: Omit<Effect<unknown, string>, 'effectFunctions'>,
   context: CyclicDeserializationContext,
 ): Effect<unknown, string> => {
-  if (!DESERIALIZE_EFFECT[category]) return data;
+  if (!DESERIALIZE_EFFECT[category]) return { ...data, effectFunctions: VOID_EFFECT };
 
-  return DESERIALIZE_EFFECT[category][data.type]?.(data, context) || data;
+  return createEffect(category, DESERIALIZE_EFFECT[category][data.type]?.(data, context) || data);
 };

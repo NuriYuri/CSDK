@@ -92,7 +92,7 @@ describe('creature', () => {
     });
 
     it('calls the serialize function from sub entities with right arguments', () => {
-      serializeEffectMock.mockImplementation((_, e) => e);
+      serializeEffectMock.mockImplementation((_, e) => ({ type: e.type, data: e.data }));
       serializeSkillDataMock.mockImplementation((s) => s.data);
       serializeStateDataMock.mockImplementation((s) => s.data);
       const effectFunctions = {} as GenericEffectFunctions;
@@ -120,7 +120,17 @@ describe('creature', () => {
         data: 88989,
       };
       registerSerializeCreatureData((toSerialize: Creature<number>) => -toSerialize.data);
-      expect(serializeCreature(creature, ['ref'])).toEqual({ ...creature, data: -88989 });
+      expect(serializeCreature(creature, ['ref'])).toEqual({
+        ...creature,
+        effects: {
+          cat: [{ type: 'test', data: 0 }],
+          cot: [
+            { type: 'test2', data: 0 },
+            { type: 'test3', data: 1 },
+          ],
+        },
+        data: -88989,
+      });
       expect(serializeEffectMock).toHaveBeenCalledTimes(3);
       expect(serializeEffectMock).toHaveBeenNthCalledWith(1, 'cat', { type: 'test', data: 0, effectFunctions }, ['ref']);
       expect(serializeEffectMock).toHaveBeenNthCalledWith(2, 'cot', { type: 'test2', data: 0, effectFunctions }, ['ref']);
@@ -168,10 +178,10 @@ describe('creature', () => {
     });
 
     it('calls the serialize function from sub entities with right arguments', () => {
-      deserializeEffectMock.mockImplementation((_, e) => e);
+      const effectFunctions = {} as GenericEffectFunctions;
+      deserializeEffectMock.mockImplementation((_, e) => ({ type: e.type, data: e.data, effectFunctions }));
       deserializeSkillDataMock.mockImplementation((s) => s);
       deserializeStateDataMock.mockImplementation((s) => s.data);
-      const effectFunctions = {} as GenericEffectFunctions;
       const creature = {
         id: 'id',
         form: 'form',
@@ -187,20 +197,30 @@ describe('creature', () => {
         level: 5,
         exp: 336,
         effects: {
+          cat: [{ type: 'test', data: 0 }],
+          cot: [
+            { type: 'test2', data: 0 },
+            { type: 'test3', data: 1 },
+          ],
+        },
+        data: 88989,
+      };
+      registerDeserializeCreatureData((data: number) => -data);
+      expect(deserializeCreature(creature, context)).toEqual({
+        ...creature,
+        effects: {
           cat: [{ type: 'test', data: 0, effectFunctions }],
           cot: [
             { type: 'test2', data: 0, effectFunctions },
             { type: 'test3', data: 1, effectFunctions },
           ],
         },
-        data: 88989,
-      };
-      registerDeserializeCreatureData((data: number) => -data);
-      expect(deserializeCreature(creature, context)).toEqual({ ...creature, data: -88989 });
+        data: -88989,
+      });
       expect(deserializeEffectMock).toHaveBeenCalledTimes(3);
-      expect(deserializeEffectMock).toHaveBeenNthCalledWith(1, 'cat', { type: 'test', data: 0, effectFunctions }, context);
-      expect(deserializeEffectMock).toHaveBeenNthCalledWith(2, 'cot', { type: 'test2', data: 0, effectFunctions }, context);
-      expect(deserializeEffectMock).toHaveBeenNthCalledWith(3, 'cot', { type: 'test3', data: 1, effectFunctions }, context);
+      expect(deserializeEffectMock).toHaveBeenNthCalledWith(1, 'cat', { type: 'test', data: 0 }, context);
+      expect(deserializeEffectMock).toHaveBeenNthCalledWith(2, 'cot', { type: 'test2', data: 0 }, context);
+      expect(deserializeEffectMock).toHaveBeenNthCalledWith(3, 'cot', { type: 'test3', data: 1 }, context);
       expect(deserializeSkillDataMock).toHaveBeenCalledTimes(2);
       expect(deserializeSkillDataMock).toHaveBeenNthCalledWith(1, 0, context);
       expect(deserializeSkillDataMock).toHaveBeenNthCalledWith(2, 1, context);

@@ -149,41 +149,56 @@ describe('effect', () => {
   });
 
   describe('registerSerializeEffect - serializeEffect', () => {
-    it('just returns the effect if category has no serializer', () => {
-      // Note: if the category exists it will try to access 99.type which does not exist and throw an error
-      expect(serializeEffect('categoryWithNoSerializer', 99 as unknown as Effect<unknown, string>, [])).toEqual(99);
+    it('returns the effect without function if category has no serializer', () => {
+      const dummyEffect = { type: 'effect', data: 99, effectFunctions: __getVoidEffectFunctions() };
+      expect(serializeEffect('categoryWithNoSerializer', dummyEffect as unknown as Effect<unknown, string>, [])).toEqual({
+        type: 'effect',
+        data: 99,
+      });
     });
 
-    it('just returns the effect if type has no serializer', () => {
+    it('returns the effect without function if type has no serializer', () => {
       registerSerializeEffect('category', 'test', (serializedEffect) => ({ ...serializedEffect, data: !effect.data }));
       const effect = { type: 'noSerializer', data: true, effectFunctions: __getVoidEffectFunctions() };
-      expect(serializeEffect('category', effect, [])).toEqual(effect);
+      expect(serializeEffect('category', effect, [])).toEqual({ type: 'noSerializer', data: true });
     });
 
     it('serializes the effect if type and category has serializer', () => {
-      registerSerializeEffect('category', 'serializable', (serializedEffect) => ({ ...serializedEffect, data: 0 }));
+      registerSerializeEffect('category', 'serializable', (serializedEffect) => ({ type: serializedEffect.type, data: 0 }));
       const effect = { type: 'serializable', data: { value: 99 }, effectFunctions: __getVoidEffectFunctions() };
-      expect(serializeEffect('category', effect, [])).toEqual({ ...effect, data: 0 });
+      expect(serializeEffect('category', effect, [])).toEqual({ type: effect.type, data: 0 });
     });
   });
 
   describe('registerDeserializeEffect - deserializeEffect', () => {
     const context = { serializedReferencingArray: [], deserializedReferencingArray: [] };
-    it('just returns the effect if category has no deserializer', () => {
-      // Note: if the category exists it will try to access 99.type which does not exist and throw an error
-      expect(deserializeEffect('categoryWithNoDeserializer', 99 as unknown as Effect<unknown, string>, context)).toEqual(99);
+    it('returns the effect if category has no deserializer', () => {
+      const effect = { type: 'noCategoryDeserializer', data: true };
+      expect(deserializeEffect('categoryWithNoDeserializer', effect, context)).toEqual({
+        type: effect.type,
+        effectFunctions: __getVoidEffectFunctions(),
+        data: true,
+      });
     });
 
-    it('just returns the effect if type has no deserializer', () => {
+    it('returns the effect if type has no deserializer', () => {
       registerDeserializeEffect('category', 'test', (deserializedEffect) => ({ ...deserializedEffect, data: !effect.data }));
-      const effect = { type: 'noDeserializer', data: true, effectFunctions: __getVoidEffectFunctions() };
-      expect(deserializeEffect('category', effect, context)).toEqual(effect);
+      const effect = { type: 'noDeserializer', data: true };
+      expect(deserializeEffect('category', effect, context)).toEqual({
+        type: effect.type,
+        effectFunctions: __getVoidEffectFunctions(),
+        data: true,
+      });
     });
 
     it('serializes the effect if type and category has deserializer', () => {
       registerDeserializeEffect('category', 'deserializable', (deserializedEffect) => ({ ...deserializedEffect, data: { value: 99 } }));
-      const effect = { type: 'deserializable', data: 0, effectFunctions: __getVoidEffectFunctions() };
-      expect(deserializeEffect('category', effect, context)).toEqual({ ...effect, data: { value: 99 } });
+      const effect = { type: 'deserializable', data: 0 };
+      expect(deserializeEffect('category', effect, context)).toEqual({
+        type: effect.type,
+        effectFunctions: __getVoidEffectFunctions(),
+        data: { value: 99 },
+      });
     });
   });
 });
