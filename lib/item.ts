@@ -82,9 +82,9 @@ const USE_HANDLERS: Record<string, GenericUseItemHandler> = {};
  *
  * @example onCanItemBeUsed('heal', (item: HealItem, scene) => testSomethingAbout(item, scene));
  */
-export const onCanItemBeUsed = <I extends ItemBase<T, U>, T, U extends string>(
+export const onCanItemBeUsed = <I extends ItemBase<T, U>, T, U extends string, V>(
   type: I['type'],
-  handler: (item: I, sceneState: GenericItemActableSceneState) => boolean,
+  handler: (item: I, sceneState: GenericItemActableSceneState & V) => boolean,
 ) => {
   CAN_BE_USED_HANDLERS[type] = handler as typeof CAN_BE_USED_HANDLERS[string];
 };
@@ -98,9 +98,9 @@ export const canItemBeUsed = <T>(item: ItemBase<unknown, string>, sceneState: Ge
   CAN_BE_USED_HANDLERS[item.type] ? CAN_BE_USED_HANDLERS[item.type](item, sceneState) : false;
 
 /** Function registering the handler to call when useItem is called with an item */
-export const onUseItem = <I extends ItemBase<T, U>, T, U extends string>(
+export const onUseItem = <I extends ItemBase<T, U>, T, U extends string, V>(
   type: I['type'],
-  handler: (item: I, sceneState: GenericItemActableSceneState) => Required<ItemActableSceneState<T, U>>,
+  handler: (item: I, sceneState: GenericItemActableSceneState & V) => Required<ItemActableSceneState<T, U>>,
 ) => {
   USE_HANDLERS[type] = handler as typeof USE_HANDLERS[string];
 };

@@ -24,6 +24,9 @@ You can't make a game by simply including CSDK to your dependencies. You'll have
       - [Deserializing effect](#deserializing-effect)
     - [Element](#element)
     - [Item](#item)
+      - [Scenes that handle items](#scenes-that-handle-items)
+      - [Telling & checking if an item can be used](#telling--checking-if-an-item-can-be-used)
+      - [Defining item actions and using item](#defining-item-actions-and-using-item)
     - [Skill](#skill)
     - [State](#state)
   - [CSDK's Scene](#csdks-scene)
@@ -204,12 +207,57 @@ Similarly to serialization, effect can be deserialized using `deserializeEffect(
 > This function is being called by the `serializeCreature` function.
 ### Element
 
-TODO: Write it
+Elements are a natural way to tell if an action is effective against something. Example, water kills wood fire, water element skills are effective against fire creatures.
+
+In CSDK elements carry those information using those members:
+
+- `id`: id of the current element
+- `weakOver`: list of element id the current element is not doing much damage (x0.5)
+- `strongOver`: list of element id the current element is doing much damage (x2)
+- `uselessOver`: list of element id the current element is not doing any damage (x0)
+
+To help with computing the damage factor, CSDK export 3 functions:
+
+- `getElementStrengthFactorByDefensiveId(element, defensiveId)`: Tell how much damage element does over the defensive element (using defensiveId).
+- `computeElementsStrengthFactorByDefensiveIds(offensiveElements, defensiveElementIds)`: Tell how much the combination of offensive elements does against defensive elements (all factor are multiplied).
+- `computeElementsStrengthFactor(offensiveElements, defensiveElements)`: does the same as `computeElementsStrengthFactorByDefensiveIds` but with elements instead of ids for the defensive side.
+
+> **Note**
+> Elements are not stored in the living entities, it's expected to be stored in DataCollections and being recomputed by effects if necessary.
 
 ### Item
 
-TODO: Write it
+In CSDK, Items have their own effects. You shouldn't store Item in the save state but instead store them in the DataCollection and save their ids whenever you need to refer to items anywhere.
 
+#### Scenes that handle items
+
+Scenes that handle items must have the `itemAction` member in their state. When an item is used, this member will be set to a value containing the following members:
+- `item`: which item is being used
+- `handle`: function to call in order to make the item do its job (will most likely mutate the state provided to `useItem`).
+
+#### Telling & checking if an item can be used
+
+In order to tell if an item can be used, you can use the `onCanItemBeUsed(type, handler: (item, sceneState) => boolean)` function. This will register the handler called to check if an item can be used.
+
+Example:
+```typescript
+onCanItemBeUsed('healingItem', (item, state: PartyState) => state.selectedCreature.hp != 0)
+```
+
+In order to check if the item can be used, you need to call `canItemBeUsed(item, sceneState)`.
+
+#### Defining item actions and using item
+
+In order to define which action an item does, you need to register an handler that returns `itemAction` state using `onUseItem(type, handler: (item, sceneState) => newState)`.
+
+Example:
+```typescript
+onUseItem('healingItem', handler: (item, sceneState) => ({ item, handle: () => {/* do something */}}))
+```
+
+TODO: Improve that part when it will actually be used in production!
+
+To use an item you need to call the `useItem(item, sceneState)` function and spread the result into the scene state.
 ### Skill
 
 TODO: Write it
