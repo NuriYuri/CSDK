@@ -70,7 +70,6 @@ Unlike other objects (skill, item), the `Creature` type use two keys as identifi
 
 To make it easier with data fetching from DataCollection, you should define a type `DataCreature` and `DataCreatureForm` where `DataCreature` define id of the creature and `DataCreatureForm` define the form and all the form related attribute of the creature. Of course, you're not forced to use the forms.
 
-
 #### Generic creature data
 
 In the generic creature data we defined the following members:
@@ -93,8 +92,8 @@ In order to define the stats, you have two functions:
 
 By default `computeStat` returns 1. We highly recommend that none of the stats goes below 1.
 
-
 Example:
+
 ```ts
 export { computeStat } from 'csdk';
 import { registerComputeStatFunction } from 'csdk';
@@ -103,7 +102,7 @@ type GameCreature = Creature<{ sp: number }>;
 
 declare function computeStat(creature: GameCreature, stat: StatName): number;
 registerComputeStatFunction((creature: GameCreature, stat: StatName) => {
-  switch(stat) {
+  switch (stat) {
     case 'maxHp':
     case 'spd':
       return Math.min(1, creature.level * 10);
@@ -125,11 +124,12 @@ As shown in the stats example, you can define specialized data for the creature.
 For that matter, CSDK exports 4 functions:
 
 - `registerSerializeCreatureData((creature, referencingArray) => unknown)`: which defines how to serialize the `creature.data` field (should return the serialized data field only)
-- `serializeCreature(creature, referencingArray)`: which serialize the whole creature and calls the registered serializer for the data field.
-- `registerDeserializeCreatureData((data, context) => unknown)`: which defines how to deserialize the data field of the creature.
-- `deserializeCreature(creature, context)`: which deserialize a creature and its data using the previously defined deserializer.
+- `serializeCreature(creature, referencingArray)`: which serialize the whole creature and calls the registered serializer for the data field
+- `registerDeserializeCreatureData((data, context) => unknown)`: which defines how to deserialize the data field of the creature
+- `deserializeCreature(creature, context)`: which deserialize a creature and its data using the previously defined deserializer
 
 Example:
+
 ```typescript
 type GameCreature = Creature<{ friend: GameCreature }>; // introduction of cyclic dependency
 
@@ -155,17 +155,19 @@ In the creatures, the effect are stored in a Record which use a category as key 
 In order to use the effect functions, you need a context which provides who is affected by the effect and what's the payload of the function.
 
 The effect context contains the following attributes:
+
 - `target`: Creature that is targeted by the current action involving the effect.
 - `user`: Optional creature that might have triggered the action
 - `skill`: Optional skill that might have triggered the action
 - `cancellationReason`: Optional mutation function to call if the effect has cancelled the action
-- `data`: Payload of the effect function to process stuff. Example, number of HP to deal to the target. This value can't be mutated but its member can.
+- `data`: Payload of the effect function to process stuff. Example, number of HP to deal to the target. This value can't be mutated but its member can
 
 #### Effect function
 
 Effect function are meant to be called while processing the effect for some actions.
 
 There's 4 kind of effect function:
+
 1. Computing function: Those function will have no return but are expected to mutate the members of the `data` field in the effect context.
 2. Preventing functions: Those function returns either `undefined`, `'passthrough'` or `'prevent'`. They are expected to effect iteration if return is defined and to change the `cancellationReason`. Those are meant to be used to test things like being able to set a state to a creature or to even deal damages.
 3. Noisy functions: Those functions are expected to return a StateMutation function that will make the scene perform stuff like displaying a message.
@@ -182,8 +184,13 @@ The act of registering an effect just mean specifying the `effectFunctions` effe
 The provided `effectFunctions` can be partial, for example, you can just provide the onCleanup function. All other function will be voided (won't cause any crash if being called).
 
 Example:
+
 ```typescript
-registerEffect('state', 'immunity', { onDamageComputation: (effect: ImmunityEffect, context: HpDownContext) => { context.hp = 0 } });
+registerEffect('state', 'immunity', {
+  onDamageComputation: (effect: ImmunityEffect, context: HpDownContext) => {
+    context.hp = 0;
+  },
+});
 ```
 
 #### Serializing effect
@@ -205,6 +212,7 @@ Similarly to serialization, effect can be deserialized using `deserializeEffect(
 
 > **Note**  
 > This function is being called by the `serializeCreature` function.
+
 ### Element
 
 Elements are a natural way to tell if an action is effective against something. Example, water kills wood fire, water element skills are effective against fire creatures.
@@ -232,16 +240,18 @@ In CSDK, Items have their own effects. You shouldn't store Item in the save stat
 #### Scenes that handle items
 
 Scenes that handle items must have the `itemAction` member in their state. When an item is used, this member will be set to a value containing the following members:
+
 - `item`: which item is being used
-- `handle`: function to call in order to make the item do its job (will most likely mutate the state provided to `useItem`).
+- `handle`: function to call in order to make the item do its job (will most likely mutate the state provided to `useItem`)
 
 #### Telling & checking if an item can be used
 
 In order to tell if an item can be used, you can use the `onCanItemBeUsed(type, handler: (item, sceneState) => boolean)` function. This will register the handler called to check if an item can be used.
 
 Example:
+
 ```typescript
-onCanItemBeUsed('healingItem', (item, state: PartyState) => state.selectedCreature.hp != 0)
+onCanItemBeUsed('healingItem', (item, state: PartyState) => state.selectedCreature.hp != 0);
 ```
 
 In order to check if the item can be used, you need to call `canItemBeUsed(item, sceneState)`.
@@ -251,6 +261,7 @@ In order to check if the item can be used, you need to call `canItemBeUsed(item,
 In order to define which action an item does, you need to register an handler that returns `itemAction` state using `onUseItem(type, handler: (item, sceneState) => newState)`.
 
 Example:
+
 ```typescript
 onUseItem('healingItem', handler: (item, sceneState) => ({ item, handle: () => {/* do something */}}))
 ```
@@ -258,21 +269,102 @@ onUseItem('healingItem', handler: (item, sceneState) => ({ item, handle: () => {
 TODO: Improve that part when it will actually be used in production!
 
 To use an item you need to call the `useItem(item, sceneState)` function and spread the result into the scene state.
+
 ### Skill
 
-TODO: Write it
+Skills only carry two members:
+
+- `id`: which is the id of the skill in your database (helping to fetch the game data using DataCollection)
+- `data`: which is the working data of the skill. You need to specify the content of the data yourself.
+
+#### Serializing skill
+
+Since skill data is user defined, you need to tell CSDK how to serialize its data to the save file.
+
+To specify the skill serialization you should use `registerSerializeSkillData(serializer: (skill, referencingArray) => data)`. The serializer should serialize skill.data into a serialized form.
+
+You can call `serializeSkillData(skill, referencingArray)` to get the serialized skill data from the defined serializer function.
+
+#### Deserializing skill
+
+As for serialization, you need to specify deserialization, to this you should call `registerDeserializeSkillData(deserializer: (skill, context) => deserializedData)`. The deserializer should deserialize the skill data into a runtime usable skill data.
+
+You can call `deserializeSkillData(skill, context)` to get the deserialized skill data from the defined deserializer function.
+
+#### Utility functions
+
+Skills are meant to be tied to a creature so the you have several function helping you with skills:
+
+- `removeSkill(creature, skillId)`: Remove any skill that carry `id` as `skillId` on the creature
+- `hasSkill(creature, skillId)`: Test if the creature has a skill with `id` equal to `skillId`
+- `addSkill(creature, skill)`: Add skill to the creature
+- `getSkill(creature, skillId)`: Get the skill from a creature where `skill.id` is `skillId`
 
 ### State
 
-TODO: Write it
+States only carry two members:
+
+- `type`: which is the type of state
+- `data`: which is the working data of the state. You need to specify the state data yourself based on its type.
+
+#### Serializing state
+
+Since state data is user defined, you need to tell CSDK how to serialize its data to the save file.
+
+To specify the state serialization you should use `registerSerializeStateData(serializer: (state, referencingArray) => data)`. The serializer should serialize state.data into a serialized form.
+
+You can call `serializeStateData(state, referencingArray)` to get the serialized state data from the defined serializer function.
+
+#### Deserializing state
+
+As for serialization, you need to specify deserialization, to this you should call `registerDeserializeStateData(deserializer: (state, context) => deserializedData)`. The deserializer should deserialize the state into a runtime usable state data. You shall use state.type to guess the shape of state.data.
+
+You can call `deserializeStateData(state, context)` to get the deserialized state data from the defined deserializer function.
+
+#### Utility functions
+
+States are meant to be tied to a creature so the you have several function helping you with states:
+
+- `removeState(creature, type)`: Remove any state of the same `type`
+- `hasState(creature, type)`: Test if the creature has a state of that `type`
+- `addState(creature, state)`: Add state to the creature
+- `getState(creature, type)`: Get the state from a creature where `state.type` is `type`
 
 ## CSDK's Scene
 
-TODO: Write it
+In CSDK scenes are object that hold a state and few functions responsible of handling the cycle of life of the scene based on the state:
+
+- `processStates(delta, state): newState`: function responsive computing an updated version of the scene state based on the `delta` time elapsed (in second) since last frame was drawn.
+- `drawFrame(state)`: function responsive of drawing the scene based on the current state
+- `isRunning(state): boolean`: function responsive of telling if the scene is still running
+- `getNextScene(state): Scene<T> | undefined`: optional function responsive of telling what scene is the next scene after `isRunning` returned false. Returning undefined or not having `getNextScene` leads to stop processing the scenes.
+
+CSDK request the next update cycle using `setImmediate`, this should ensure that most of the queued events gets processed.
+
+Here's the flow of the scene update:
+
+```mermaid
+# TODO
+```
+
+To start processing scene, call: `startSceneProcessing(scene, cleanup: () => void, frameTime: () => number)`. frameTime gives the `delta` value required by `processStates`, `cleanup` is a function called once `getNextScene` returns undefined or is undefined when called. This function calls `setImmediate` to request the next update. Depending on your definition of `frameTime`, it is possible that the first update call gives a delta of exactly `0`.
+
+This function can be called several time if and only if the last call finished its processing. This mean you cannot have two scene in parallel in CSDK.
 
 ### StateMutationQueue
 
-TODO: Write it
+In order to solve synchronization issue between stuff like executing the battle code and showing feedback to the user, CSDK comes with the StateMutationQueue concept.
+
+The StateMutationQueue consist of having an array of arrow function performing mutation over the scene state in the scene state. This queue is stored in `mQueue` and each element of this queue should take the state and return an partially updated version of the state. Usually, you don't have to deal with the `mQueue` field putting aside defining it as `StateMutationFunction<T>[]` or using the type `StateMutationQueue<T>` for your scene state where T is the state type.
+
+Inside the `processStates` function of the scene, you shall call `hasStateMutationQueued(state)` to detect if there's a mutation to process and `executeStateMutation(state)` to execute the next state mutation and get the updated state version. `executeStateMutation` is removing the `StateMutationFunction` from the queue.
+
+To add a state mutation to execute later you can call `queueStateMutation(state, mutation)` where `state` is the state of the scene (with the `mQueue` field) and `mutation` is the function that will be called by `executeStateMutation`.
+
+> **Note**  
+> All state mutation are executed in the same order they were added to the queue
+
+You can add several mutations using `queueStateMutations(state, mutations)`. It's the same as `queueStateMutation` but with several mutations at once. Mutations will all be executed in the order they are defined into `mutations` array.
 
 ## Save Data handling
 

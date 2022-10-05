@@ -54,7 +54,7 @@ export const registerDeserializeCreatureData = <T, U>(deserializer: (data: T, co
 export const deserializeCreature = (creature: SerializedCreature<unknown>, context: CyclicDeserializationContext): Creature<unknown> => ({
   ...creature,
   states: creature.states.map((state) => ({ ...state, data: deserializeStateData(state, context) })),
-  skills: creature.skills.map((skill) => ({ ...skill, data: deserializeSkillData(skill.data, context) })),
+  skills: creature.skills.map((skill) => ({ ...skill, data: deserializeSkillData(skill, context) })),
   effects: Object.fromEntries(
     Object.entries(creature.effects).map(([category, list]) => [category, list.map((effect) => deserializeEffect(category, effect, context))]),
   ),

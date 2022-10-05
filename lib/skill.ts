@@ -35,7 +35,7 @@ export const getSkill = <T>(creature: DataWithSkills, id: string): Skill<T> | un
   creature.skills.find((skill) => skill.id === id) as Skill<T>;
 
 let SERIALIZE_SKILL_DATA = (skill: Skill<unknown>, referencingArray: ReferencingArray): unknown => skill.data;
-let DESERIALIZE_SKILL_DATA = (data: unknown, deserializationContext: CyclicDeserializationContext) => data;
+let DESERIALIZE_SKILL_DATA = (skill: Skill<unknown>, deserializationContext: CyclicDeserializationContext) => skill.data;
 
 /**
  * Register the function that tells CSDK how to serialize the skill data
@@ -57,10 +57,10 @@ export const serializeSkillData = (skill: Skill<unknown>, referencingArray: Refe
  *   deserializationContext.serializedReferencingArray,
  * ) as SkillData);
  */
-export const registerDeserializeSkillData = <T, U>(deserializer: (data: U, deserializationContext: CyclicDeserializationContext) => T) => {
+export const registerDeserializeSkillData = <T, U>(deserializer: (data: Skill<U>, deserializationContext: CyclicDeserializationContext) => T) => {
   DESERIALIZE_SKILL_DATA = deserializer;
 };
 
 /** Function that deserialize the skill data */
-export const deserializeSkillData = (data: unknown, deserializationContext: CyclicDeserializationContext) =>
-  DESERIALIZE_SKILL_DATA(data, deserializationContext);
+export const deserializeSkillData = (skill: Skill<unknown>, deserializationContext: CyclicDeserializationContext) =>
+  DESERIALIZE_SKILL_DATA(skill, deserializationContext);

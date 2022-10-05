@@ -180,7 +180,7 @@ describe('creature', () => {
     it('calls the serialize function from sub entities with right arguments', () => {
       const effectFunctions = {} as GenericEffectFunctions;
       deserializeEffectMock.mockImplementation((_, e) => ({ type: e.type, data: e.data, effectFunctions }));
-      deserializeSkillDataMock.mockImplementation((s) => s);
+      deserializeSkillDataMock.mockImplementation((s) => s.data);
       deserializeStateDataMock.mockImplementation((s) => s.data);
       const creature = {
         id: 'id',
@@ -222,8 +222,8 @@ describe('creature', () => {
       expect(deserializeEffectMock).toHaveBeenNthCalledWith(2, 'cot', { type: 'test2', data: 0 }, context);
       expect(deserializeEffectMock).toHaveBeenNthCalledWith(3, 'cot', { type: 'test3', data: 1 }, context);
       expect(deserializeSkillDataMock).toHaveBeenCalledTimes(2);
-      expect(deserializeSkillDataMock).toHaveBeenNthCalledWith(1, 0, context);
-      expect(deserializeSkillDataMock).toHaveBeenNthCalledWith(2, 1, context);
+      expect(deserializeSkillDataMock).toHaveBeenNthCalledWith(1, { data: 0, id: 'test' }, context);
+      expect(deserializeSkillDataMock).toHaveBeenNthCalledWith(2, { data: 1, id: 'test2' }, context);
       expect(deserializeStateDataMock).toHaveBeenCalledTimes(2);
       expect(deserializeStateDataMock).toHaveBeenNthCalledWith(1, { type: 'test', data: 0 }, context);
       expect(deserializeStateDataMock).toHaveBeenNthCalledWith(2, { type: 'test2', data: 1 }, context);
